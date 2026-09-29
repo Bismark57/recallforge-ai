@@ -67,7 +67,20 @@ edit, and mark Got it / Needs work — all working in the deployed site.
   interval, repetitions, due date. "Due now" queue drives the Review tab.
 - **Interleaving:** review queue mixes concepts and question types.
 
-## Phase 3 — Accounts & scale (only after real users)
+## Phase 3 — Accounts & scale — DONE 2026-09-29 (code-complete; needs account setup)
+
+- **Supabase** (free tier): `supabase/schema.sql` (profiles, study_sets,
+  questions with RLS), `lib/cloud.js` (email/password auth, local-first sync —
+  pull-merge with newer-`updatedAt` wins, then push; deletes don't propagate
+  in v1). Account view: cloud config, sign in/up, Sync now, last-sync stamp.
+- **Hosted-key option:** `worker/` — Cloudflare Worker proxy (`POST
+  /v1/generate`) that validates the Supabase JWT, enforces a per-user daily
+  cap via KV (default 50), and forwards to OpenAI with the operator's key.
+  Client routes through it when "Use hosted key" is ticked.
+- **Exports:** JSON backup/restore, Anki-compatible TSV, printable mock exam
+  (print CSS, answer key on its own page).
+- Setup steps: `docs/PHASE3_SETUP.md` (Supabase project + SQL, worker deploy,
+  Pages go-live).
 
 - **Supabase** (free tier): auth + Postgres for study sets, answers, attempts,
   review schedules. Syncs across devices.
