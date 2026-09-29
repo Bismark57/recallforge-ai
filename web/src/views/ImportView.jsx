@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { createSet } from '../lib/store.js'
 import { chat } from '../lib/llm.js'
 import { analyzePrompt } from '../lib/prompts.js'
+import { extractFromFile, ACCEPT } from '../lib/extract.js'
 
 export default function ImportView({ onDone, onBack }) {
   const [title, setTitle] = useState('')
@@ -9,7 +10,30 @@ export default function ImportView({ onDone, onBack }) {
   const [level, setLevel] = useState('')
   const [text, setText] = useState('')
   const [working, setWorking] = useState(false)
+  const [extracting, setExtracting] = useState(false)
+  const [fileInfo, setFileInfo] = useState('')
   const [error, setError] = useState('')
+
+  const onFile = async (file) => {
+    if (!file) return
+    setExtracting(true)
+    setError('')
+    setFileInfo('')
+    try {
+      const { text: t, pages, kind } = await extractFromFile(file)
+      if (t.trim().length < 50) throw new Error('No readable text found in that file.')
+      setText(t)
+      setTitle((prev) => prev || file.name.replace(/\.[^.]+$/, ''))
+      setFileInfo(
+        `${kind} extracted: ${t.length.toLocaleString()} characters` +
+          (pages ? ` · ${pages} pages` : ''),
+      )
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setExtracting(false)
+    }
+  }
 
   const analyze = async () => {
     if (text.trim().length < 50) {
@@ -49,6 +73,25 @@ export default function ImportView({ onDone, onBack }) {
         Paste your notes. The AI will analyze, dedupe, and restructure them into
         clean study notes first.
       </p>
+
+      <label
+        className={`block border-2 border-dashed rounded-xl p-6 mb-4 text-center cursor-pointer transition-colors ${
+          extracting ? 'border-amber-500/50 bg-amber-500/5' : 'border-forge-700 hover:border-amber-500/40'
+        }`}
+      >
+        <input
+          type="file"
+          accept={ACCEPT}
+          className="hidden"
+          onChange={(e) => onFile(e.target.files[0])}
+        />
+        <div className="text-2xl mb-1">📄</div>
+        <div className="text-sm text-gray-300">
+          {extracting ? 'Extracting text…' : 'Drop a PDF / Word / text file, or click to browse'}
+        </div>
+        <div className="text-xs text-gray-600 mt-1">Processed entirely in your browser</div>
+      </label>
+      {fileInfo && <div className="text-xs text-green-400 mb-4">✓ {fileInfo}</div>}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
         <input className={input} placeholder="Set title" value={title} onChange={(e) => setTitle(e.target.value)} />
