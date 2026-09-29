@@ -50,7 +50,17 @@ Goal: a usable app with zero infrastructure cost.
 Exit criteria: paste notes → get 20 real questions with real answers → practice,
 edit, and mark Got it / Needs work — all working in the deployed site.
 
-## Phase 2 — Depth
+## Phase 2 — Depth — DONE 2026-09-29
+
+- **PDF/Word extraction** in-browser: `lib/extract.js` (pdfjs-dist for PDF,
+  mammoth for DOCX, plus TXT/MD). No uploads to a server. File drop zone in
+  ImportView with auto-title from filename.
+- **SM-2 spaced repetition:** per-question easiness / interval / repetitions /
+  due date; "Got it" = quality 4, "Needs work" = quality 2.
+- **Recall & Revisit:** dedicated ReviewView — every due card across all sets,
+  most overdue first (natural interleaving), with session progress and a
+  completion screen. Dashboard shows due count, totals, average mastery with
+  a review entry point.
 
 - **PDF/Word extraction** in-browser (pdf.js / mammoth). No uploads to a server.
 - **SM-2 spaced repetition** (~30 lines): each question gets easiness,
