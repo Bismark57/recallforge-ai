@@ -71,6 +71,35 @@ function extractJson(text) {
 
 export async function chat({ system, user, temperature = 0.4 }) {
   const { provider = 'openai', apiKey, model } = getSettings()
+
+  // Hosted-key mode: route through our Cloudflare Worker proxy, authenticated
+  // with the Supabase session token. No personal API key needed.
+  try {
+    const { getCloudConfig, getSession } = await import('./cloud.js')
+    const cc = getCloudConfig()
+    if (cc.useHostedKey && cc.proxyUrl) {
+      const session = await getSession()
+      if (!session?.access_token) throw new Error('Sign in to use the hosted key.')
+      const res = await fetch(cc.proxyUrl.replace(/\/$/, '') + '/v1/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ system, user, temperature, model: model || undefined }),
+      })
+      if (!res.ok) {
+        const text = await res.text().catch(() => '')
+        throw new Error(`Hosted key error ${res.status}: ${text.slice(0, 200)}`)
+      }
+      return await res.json()
+    }
+  } catch (e) {
+    if (e.message?.startsWith('Hosted key') || e.message?.includes('Sign in'))
+      throw e
+    // cloud.js unavailable or not configured — fall through to BYOK
+  }
+
   if (!apiKey) throw new Error('No API key set. Add one in Settings.')
   const p = PROVIDERS[provider]
   if (!p) throw new Error(`Unknown provider: ${provider}`)
