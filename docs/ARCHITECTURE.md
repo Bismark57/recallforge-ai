@@ -20,7 +20,15 @@ own analyzed notes** — never generic, never mixed with unreviewed input.
 - GitHub Actions workflow deploys `web/` to Pages on push to `main`
 - This document
 
-## Phase 1 — Make it real (no backend)
+## Phase 1 — Make it real (no backend) — DONE 2026-09-28
+
+Shipped in `web/src/`: BYOK LLM client (`lib/llm.js` — OpenAI + Anthropic, key
+in localStorage only), pipeline prompts (`lib/prompts.js`: analyze → blueprint
+→ batched generate → verify), localStorage store (`lib/store.js`), SM-2
+scheduler (`lib/sm2.js`, pulled forward from Phase 2). Views: Dashboard →
+Import → Analyze (editable notes) → Configure (5–40 questions, types, answer
+length) → Practice (think → reveal → hint → confidence → Got it/Needs work →
+edit answers into your own words).
 
 Goal: a usable app with zero infrastructure cost.
 
