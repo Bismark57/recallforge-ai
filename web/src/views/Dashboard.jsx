@@ -3,9 +3,11 @@ import { isDue } from '../lib/sm2.js'
 import { getSettings } from '../lib/llm.js'
 import { useState } from 'react'
 
-export default function Dashboard({ onNew, onOpen, onSettings }) {
+export default function Dashboard({ onNew, onOpen, onSettings, onReview }) {
   const [sets, setSets] = useState(loadSets)
   const hasKey = !!getSettings().apiKey
+  const totalDue = sets.reduce((n, s) => n + s.questions.filter(isDue).length, 0)
+  const totalQ = sets.reduce((n, s) => n + s.questions.length, 0)
 
   const remove = (id) => {
     if (window.confirm('Delete this study set?')) {
@@ -43,6 +45,30 @@ export default function Dashboard({ onNew, onOpen, onSettings }) {
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-6 text-sm text-amber-200">
           Add your own OpenAI or Anthropic API key in Settings to enable real
           question generation. It's stored only in this browser.
+        </div>
+      )}
+
+      {totalDue > 0 && (
+        <button
+          onClick={onReview}
+          className="w-full mb-6 bg-amber-500/10 border border-amber-500/40 rounded-xl p-4 text-left hover:bg-amber-500/15 transition-colors"
+        >
+          <div className="font-semibold text-amber-200">
+            🔁 {totalDue} card{totalDue === 1 ? '' : 's'} due for review
+          </div>
+          <div className="text-sm text-amber-100/60">Start a recall session →</div>
+        </button>
+      )}
+
+      {sets.length > 0 && (
+        <div className="flex gap-6 mb-6 text-sm text-gray-500">
+          <span><span className="text-gray-200 font-semibold">{sets.length}</span> sets</span>
+          <span><span className="text-gray-200 font-semibold">{totalQ}</span> questions</span>
+          <span>
+            <span className="text-gray-200 font-semibold">
+              {totalQ ? Math.round(sets.reduce((n, s) => n + setMastery(s) * s.questions.length, 0) / totalQ) : 0}%
+            </span> average mastery
+          </span>
         </div>
       )}
 
