@@ -7,8 +7,10 @@ import PracticeView from './views/PracticeView.jsx'
 import SettingsView from './views/SettingsView.jsx'
 import { getSet } from './lib/store.js'
 
+import ReviewView from './views/ReviewView.jsx'
+
 // view: { name, setId? }
-// dashboard -> import -> analyze -> configure -> practice
+// dashboard -> import -> analyze -> configure -> practice ; dashboard -> review
 export default function App() {
   const [view, setView] = useState({ name: 'dashboard' })
   const [returnTo, setReturnTo] = useState('dashboard')
@@ -32,6 +34,7 @@ export default function App() {
               go(s.questions.length ? 'practice' : s.notes ? 'configure' : 'analyze', id)
             }}
             onSettings={openSettings}
+            onReview={() => go('review')}
           />
         )}
         {view.name === 'import' && (
@@ -58,6 +61,7 @@ export default function App() {
             onAddMore={() => go('configure', view.setId)}
           />
         )}
+        {view.name === 'review' && <ReviewView onBack={() => go('dashboard')} />}
         {view.name === 'settings' && <SettingsView onBack={backFromSettings} />}
       </div>
     </div>
