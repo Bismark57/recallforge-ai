@@ -8,9 +8,11 @@ import SettingsView from './views/SettingsView.jsx'
 import { getSet } from './lib/store.js'
 
 import ReviewView from './views/ReviewView.jsx'
+import AccountView from './views/AccountView.jsx'
+import PrintExamView from './views/PrintExamView.jsx'
 
 // view: { name, setId? }
-// dashboard -> import -> analyze -> configure -> practice ; dashboard -> review
+// dashboard -> import -> analyze -> configure -> practice ; dashboard -> review ; dashboard -> account
 export default function App() {
   const [view, setView] = useState({ name: 'dashboard' })
   const [returnTo, setReturnTo] = useState('dashboard')
@@ -35,6 +37,7 @@ export default function App() {
             }}
             onSettings={openSettings}
             onReview={() => go('review')}
+            onAccount={() => go('account')}
           />
         )}
         {view.name === 'import' && (
@@ -62,6 +65,15 @@ export default function App() {
           />
         )}
         {view.name === 'review' && <ReviewView onBack={() => go('dashboard')} />}
+        {view.name === 'account' && (
+          <AccountView
+            onBack={() => go('dashboard')}
+            onPrint={(id) => go('print', id)}
+          />
+        )}
+        {view.name === 'print' && (
+          <PrintExamView setId={view.setId} onBack={() => go('account')} />
+        )}
         {view.name === 'settings' && <SettingsView onBack={backFromSettings} />}
       </div>
     </div>
