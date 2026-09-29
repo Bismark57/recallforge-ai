@@ -3,7 +3,7 @@ import { isDue } from '../lib/sm2.js'
 import { getSettings } from '../lib/llm.js'
 import { useState } from 'react'
 
-export default function Dashboard({ onNew, onOpen, onSettings, onReview }) {
+export default function Dashboard({ onNew, onOpen, onSettings, onReview, onAccount }) {
   const [sets, setSets] = useState(loadSets)
   const hasKey = !!getSettings().apiKey
   const totalDue = sets.reduce((n, s) => n + s.questions.filter(isDue).length, 0)
@@ -26,6 +26,12 @@ export default function Dashboard({ onNew, onOpen, onSettings, onReview }) {
           <p className="text-gray-400 mt-1">Turn material into mastery.</p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={onAccount}
+            className="px-4 py-2 rounded-lg bg-forge-800 border border-forge-700 hover:border-amber-500/50 text-sm"
+          >
+            Account
+          </button>
           <button
             onClick={onSettings}
             className="px-4 py-2 rounded-lg bg-forge-800 border border-forge-700 hover:border-amber-500/50 text-sm"
