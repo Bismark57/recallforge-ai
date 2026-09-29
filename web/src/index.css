@@ -7,3 +7,13 @@ body {
   color: #e5e7eb;
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+}
