@@ -20,6 +20,7 @@ const uid = () => Math.random().toString(36).slice(2, 10)
 
 export function createSet({ title, subject, level, sourceText }) {
   const sets = loadSets()
+  const now = Date.now()
   const set = {
     id: uid(),
     title: title || 'Untitled set',
@@ -30,7 +31,8 @@ export function createSet({ title, subject, level, sourceText }) {
     concepts: [],
     flags: [],
     questions: [],
-    createdAt: Date.now(),
+    createdAt: now,
+    updatedAt: now,
   }
   sets.unshift(set)
   persist(sets)
@@ -42,7 +44,9 @@ export function getSet(id) {
 }
 
 export function updateSet(id, patch) {
-  const sets = loadSets().map((s) => (s.id === id ? { ...s, ...patch } : s))
+  const sets = loadSets().map((s) =>
+    s.id === id ? { ...s, ...patch, updatedAt: Date.now() } : s,
+  )
   persist(sets)
   return sets.find((s) => s.id === id)
 }
@@ -64,6 +68,7 @@ export function addQuestions(id, questions) {
     confidence: 3,
     attempts: 0,
     sm2: initSm2(),
+    updatedAt: Date.now(),
   }))
   const sets = loadSets().map((s) =>
     s.id === id ? { ...s, questions: [...s.questions, ...withMeta] } : s,
@@ -77,8 +82,9 @@ export function updateQuestion(setId, qid, patch) {
     s.id === setId
       ? {
           ...s,
+          updatedAt: Date.now(),
           questions: s.questions.map((q) =>
-            q.id === qid ? { ...q, ...patch } : q,
+            q.id === qid ? { ...q, ...patch, updatedAt: Date.now() } : q,
           ),
         }
       : s,
