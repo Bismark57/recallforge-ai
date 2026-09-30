@@ -69,50 +69,53 @@ function extractJson(text) {
   return JSON.parse(candidate)
 }
 
+// Default hosted-key proxy, baked in at build time. Lets anyone generate
+// questions immediately — no account, no API key. A personal API key in
+// Settings always takes precedence (unlimited, direct to the provider).
+// Set this to the deployed worker URL, e.g.
+// 'https://recallforge-proxy.<you>.workers.dev'. Empty = BYOK only.
+export const DEFAULT_PROXY_URL = ''
+
 export async function chat({ system, user, temperature = 0.4 }) {
   const { provider = 'openai', apiKey, model } = getSettings()
 
-  // Hosted-key mode: route through our Cloudflare Worker proxy, authenticated
-  // with the Supabase session token. No personal API key needed.
-  try {
-    const { getCloudConfig, getSession } = await import('./cloud.js')
-    const cc = getCloudConfig()
-    if (cc.useHostedKey && cc.proxyUrl) {
-      const session = await getSession()
-      if (!session?.access_token) throw new Error('Sign in to use the hosted key.')
-      const res = await fetch(cc.proxyUrl.replace(/\/$/, '') + '/v1/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ system, user, temperature, model: model || undefined }),
-      })
-      if (!res.ok) {
-        const text = await res.text().catch(() => '')
-        throw new Error(`Hosted key error ${res.status}: ${text.slice(0, 200)}`)
-      }
-      return await res.json()
+  // 1. Bring-your-own-key: straight to the provider.
+  if (apiKey) {
+    const p = PROVIDERS[provider]
+    if (!p) throw new Error(`Unknown provider: ${provider}`)
+    const res = await fetch(p.url, {
+      method: 'POST',
+      headers: p.headers(apiKey),
+      body: JSON.stringify(p.body(model || p.defaultModel, system, user, temperature)),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`API error ${res.status}: ${text.slice(0, 200)}`)
     }
-  } catch (e) {
-    if (e.message?.startsWith('Hosted key') || e.message?.includes('Sign in'))
-      throw e
-    // cloud.js unavailable or not configured — fall through to BYOK
+    return extractJson(p.extract(await res.json()))
   }
 
-  if (!apiKey) throw new Error('No API key set. Add one in Settings.')
-  const p = PROVIDERS[provider]
-  if (!p) throw new Error(`Unknown provider: ${provider}`)
-
-  const res = await fetch(p.url, {
-    method: 'POST',
-    headers: p.headers(apiKey),
-    body: JSON.stringify(p.body(model || p.defaultModel, system, user, temperature)),
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`API error ${res.status}: ${text.slice(0, 200)}`)
+  // 2. Hosted key via the Cloudflare Worker proxy — no account or key needed,
+  // rate-limited per IP per day. Per-user override in Account if set.
+  let proxyUrl = DEFAULT_PROXY_URL
+  try {
+    const { getCloudConfig } = await import('./cloud.js')
+    proxyUrl = (getCloudConfig().proxyUrl || '').trim() || proxyUrl
+  } catch {
+    // cloud.js unavailable — fall back to the baked-in default
   }
-  const raw = p.extract(await res.json())
-  return extractJson(raw)
+  if (proxyUrl) {
+    const res = await fetch(proxyUrl.replace(/\/$/, '') + '/v1/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ system, user, temperature }),
+    })
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Hosted key error ${res.status}: ${text.slice(0, 200)}`)
+    }
+    return await res.json()
+  }
+
+  throw new Error('No API key set. Add one in Settings.')
 }

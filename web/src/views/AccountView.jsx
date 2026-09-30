@@ -29,7 +29,6 @@ export default function AccountView({ onBack, onPrint }) {
       url: (cfg.url || '').trim().replace(/\/$/, ''),
       anonKey: (cfg.anonKey || '').trim(),
       proxyUrl: (cfg.proxyUrl || '').trim().replace(/\/$/, ''),
-      useHostedKey: !!cfg.useHostedKey,
     })
     setSaved(true)
     setTimeout(() => setSaved(false), 1500)
@@ -107,17 +106,13 @@ export default function AccountView({ onBack, onPrint }) {
         <label className="block text-xs text-gray-500 mb-1">Supabase anon key</label>
         <input className={`${input} mb-3 font-mono`} type="password" placeholder="eyJ…"
           value={cfg.anonKey || ''} onChange={(e) => setCfg({ ...cfg, anonKey: e.target.value })} />
-        <label className="block text-xs text-gray-500 mb-1">Hosted-key proxy URL (optional)</label>
-        <input className={`${input} mb-3 font-mono`} placeholder="https://recallforge-proxy.you.workers.dev"
+        <label className="block text-xs text-gray-500 mb-1">Hosted-key proxy URL override (advanced, optional)</label>
+        <input className={`${input} mb-2 font-mono`} placeholder="https://recallforge-proxy.you.workers.dev"
           value={cfg.proxyUrl || ''} onChange={(e) => setCfg({ ...cfg, proxyUrl: e.target.value })} />
-        <label className="flex items-center gap-2 text-sm cursor-pointer mb-4">
-          <input type="checkbox" checked={!!cfg.useHostedKey}
-            onChange={(e) => setCfg({ ...cfg, useHostedKey: e.target.checked })}
-            className="accent-amber-500" disabled={!cfg.proxyUrl} />
-          <span className={!cfg.proxyUrl ? 'text-gray-600' : ''}>
-            Use hosted key instead of my own API key (free trial, rate-limited)
-          </span>
-        </label>
+        <p className="text-xs text-gray-500 mb-4">
+          Question generation uses the free hosted key automatically — no account needed.
+          Add your own API key in Settings for unlimited use.
+        </p>
         <button onClick={saveCfg} className="px-5 py-2 rounded-lg bg-forge-800 border border-forge-700 text-sm hover:border-amber-500/50">
           {saved ? 'Saved ✓' : 'Save configuration'}
         </button>

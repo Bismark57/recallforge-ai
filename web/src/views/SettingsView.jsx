@@ -46,7 +46,7 @@ export default function SettingsView({ onBack }) {
         ))}
       </div>
 
-      <label className="block text-sm font-medium mb-2">API key</label>
+      <label className="block text-sm font-medium mb-2">API key <span className="text-gray-500 font-normal">(optional — leave empty to use the free hosted key)</span></label>
       <input
         type="password"
         className={`${input} mb-4 font-mono`}

@@ -1,9 +1,9 @@
 // RecallForge hosted-key proxy (Cloudflare Worker).
 //
-// Lets new users try the app without their own API key. The caller
-// authenticates with their Supabase JWT; the worker validates it against
-// Supabase, enforces a per-user daily cap via KV, then forwards to OpenAI
-// with the operator's key. The operator's key never reaches the browser.
+// Lets anyone try the app without an account or API key. Requests are
+// rate-limited per day: signed-in users (valid Supabase JWT) get the full
+// DAILY_CAP, anonymous users are limited by IP (ANON_DAILY_CAP). The
+// operator's OpenAI key never reaches the browser.
 
 const cors = (env) => ({
   'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
@@ -17,6 +17,35 @@ function extractJson(text) {
   return JSON.parse(start >= 0 && end > start ? text.slice(start, end + 1) : text)
 }
 
+// Identify the caller: a validated Supabase user id when a good JWT is
+// supplied, otherwise the client IP. Returns { id, cap }.
+async function identify(request, env) {
+  const auth = request.headers.get('Authorization') || ''
+  const token = auth.replace(/^Bearer\s+/i, '')
+  if (token) {
+    try {
+      const me = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          apikey: env.SUPABASE_ANON_KEY,
+        },
+      })
+      if (me.ok) {
+        const user = await me.json()
+        if (user?.id)
+          return { id: `user:${user.id}`, cap: parseInt(env.DAILY_CAP || '50', 10) }
+      }
+    } catch {
+      // fall through to anonymous
+    }
+  }
+  const ip =
+    request.headers.get('CF-Connecting-IP') ||
+    request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim() ||
+    'unknown'
+  return { id: `ip:${ip}`, cap: parseInt(env.ANON_DAILY_CAP || '10', 10) }
+}
+
 export default {
   async fetch(request, env) {
     if (request.method === 'OPTIONS')
@@ -25,30 +54,10 @@ export default {
     if (request.method !== 'POST' || url.pathname !== '/v1/generate')
       return new Response('Not found', { status: 404, headers: cors(env) })
 
-    // 1. Validate the Supabase JWT by asking Supabase who it belongs to.
-    const auth = request.headers.get('Authorization') || ''
-    const token = auth.replace(/^Bearer\s+/i, '')
-    if (!token)
-      return new Response('Missing token', { status: 401, headers: cors(env) })
-
-    let user
-    try {
-      const me = await fetch(`${env.SUPABASE_URL}/auth/v1/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: env.SUPABASE_ANON_KEY,
-        },
-      })
-      if (!me.ok) throw new Error('invalid token')
-      user = await me.json()
-    } catch {
-      return new Response('Invalid token', { status: 401, headers: cors(env) })
-    }
-
-    // 2. Daily per-user cap.
-    const cap = parseInt(env.DAILY_CAP || '50', 10)
+    // 1. Who's calling, and what's their daily cap?
+    const { id, cap } = await identify(request, env)
     const day = new Date().toISOString().slice(0, 10)
-    const key = `rl:${user.id}:${day}`
+    const key = `rl:${id}:${day}`
     const used = parseInt((await env.RATE_LIMITS.get(key)) || '0', 10)
     if (used >= cap)
       return new Response(
@@ -56,7 +65,7 @@ export default {
         { status: 429, headers: { 'Content-Type': 'application/json', ...cors(env) } },
       )
 
-    // 3. Forward to OpenAI.
+    // 2. Forward to OpenAI.
     let body
     try {
       body = await request.json()
@@ -92,7 +101,7 @@ export default {
     }
     const raw = (await llm.json()).choices?.[0]?.message?.content ?? ''
 
-    // 4. Count it against the cap (only on success).
+    // 3. Count it against the cap (only on success).
     await env.RATE_LIMITS.put(key, String(used + 1), { expirationTtl: 86400 * 2 })
 
     return new Response(JSON.stringify(extractJson(raw)), {

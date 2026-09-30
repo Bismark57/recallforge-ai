@@ -22,24 +22,25 @@ How sync works: local-first. `Sync now` pulls first (newer `updatedAt` wins
 per set and per question), then pushes everything up. Deletes don't propagate
 in v1 — deleting on one device won't delete on another.
 
-## B. Hosted-key proxy (Cloudflare Worker, optional)
+## B. Hosted-key proxy (Cloudflare Worker)
 
-Lets new users try generation without their own API key, capped per user per
-day, billed to your OpenAI key.
+Lets anyone generate questions immediately — no account, no API key.
+Anonymous users are rate-limited by IP (`ANON_DAILY_CAP`, default 10/day);
+signed-in users (Supabase JWT) get the full `DAILY_CAP` (default 50/day).
+Usage is billed to your OpenAI key.
 
 1. `npm install -g wrangler` and `wrangler login`.
 2. `cd worker`
 3. `wrangler kv:namespace create RATE_LIMITS` → paste the id into
    `wrangler.toml`.
-4. Edit `wrangler.toml`: set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
-   `DAILY_CAP` (default 50 requests/user/day).
+4. Edit `wrangler.toml`: set `SUPABASE_URL`, `SUPABASE_ANON_KEY`,
+   `DAILY_CAP`, and `ANON_DAILY_CAP`.
 5. `wrangler secret put OPENAI_API_KEY` → paste your OpenAI key.
 6. `wrangler deploy` → copy the `*.workers.dev` URL.
-7. In RecallForge **Account**, paste it as the proxy URL and tick
-   **"Use hosted key instead of my own API key"**.
+7. Set it as `DEFAULT_PROXY_URL` in `web/src/lib/llm.js`, rebuild, redeploy.
 
-Cost note: at `gpt-4o-mini` prices, 50 requests/day/user is a few cents per
-active user per day. Lower `DAILY_CAP` or switch `MODEL` if needed.
+Cost note: at `gpt-4o-mini` prices, 10 anonymous requests/day is a few cents
+per active user per day at most. Lower the caps or switch `MODEL` if needed.
 
 ## C. Going live (GitHub Pages)
 

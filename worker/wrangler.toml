@@ -13,6 +13,7 @@ SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
 SUPABASE_ANON_KEY = "YOUR_SUPABASE_ANON_KEY"
 ALLOWED_ORIGIN = "*"
 DAILY_CAP = "50"
+ANON_DAILY_CAP = "10"
 MODEL = "gpt-4o-mini"
 
 # Secrets (set with `wrangler secret put`):
